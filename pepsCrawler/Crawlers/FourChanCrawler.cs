@@ -55,7 +55,7 @@ namespace pepsCrawler.Crawlers
                         {
                             // Too few images to be a thread
                             // Get all images from main page
-                            images = await GetAllImagesAsStreams(thread);
+                            images = await GetAllImagesAsStreams(thread, "page");
                             await WriteImagesToFile(images);
                         }
                     }
@@ -98,6 +98,7 @@ namespace pepsCrawler.Crawlers
             if (shouldSaveImage)
             {
                 Console.WriteLine("saving image to path: " + pathAndFilename);
+                img.Tag = new{imageDto.ThreadName}; // TODO Not working to add Tag to image. Needs to be fixed.
                 img.Save(pathAndFilename, imageDto.ChosenImageFormat);
             }
             else
@@ -121,9 +122,9 @@ namespace pepsCrawler.Crawlers
                     return false;
                 }
 
-                if (image.Size.Width < 2300)
+                if (image.Size.Width < 1900)
                 {
-                    Console.WriteLine($"image.Size.Width < 2500. {image.Size.Width}\nForkaster.");
+                    Console.WriteLine($"image.Size.Width < 1900. {image.Size.Width}\nForkaster.");
                     return false;
                 }
             }
@@ -136,7 +137,7 @@ namespace pepsCrawler.Crawlers
                     return false;
                 }
 
-                if (image.Size.Height < 1700)
+                if (image.Size.Height < 1000)
                 {
                     Console.WriteLine($"image.Size.Height < 1900. {image.Size.Height}\nForkaster.");
                     return false;
@@ -164,7 +165,7 @@ namespace pepsCrawler.Crawlers
             return writeWentWell;
         }
 
-        private async Task<List<ImageDto>> GetAllImagesAsStreams(HtmlNode thread)
+        private async Task<List<ImageDto>> GetAllImagesAsStreams(HtmlNode thread, string threadLink)
         {
             var images = new List<ImageDto>();
             var imageLinkNodes = thread.SelectNodes(XPathConstants.AllImageLinks);
@@ -173,7 +174,7 @@ namespace pepsCrawler.Crawlers
             {
                 var image = await _client.DownloadFile(imageLink);
                 if (image == null) continue;
-                var imageDto = new ImageDto(image, imageLink);
+                var imageDto = new ImageDto(image, imageLink, threadLink);
                 images.Add(imageDto);
             }
 
@@ -198,7 +199,7 @@ namespace pepsCrawler.Crawlers
                     {
                         Console.WriteLine("Trying to parse thread content.");
                         var threadHtmlDocument = await HtmlHelpers.ParseContentToHtmlDocument(threadContent);
-                        return await GetAllImagesAsStreams(threadHtmlDocument.DocumentNode);
+                        return await GetAllImagesAsStreams(threadHtmlDocument.DocumentNode, threadUrl);
                     }
 
                     Console.WriteLine("404, did not find thread.");

@@ -32,5 +32,11 @@ namespace pepsCrawler.Helpers
             var arrayOfStrings = link.Split("/");
             return arrayOfStrings[arrayOfStrings.Length - 1];
         }
+
+        public static string GetThreadNumberFromLink(string link)
+        {
+            var arrayOfStrings = link.Split("/");
+            return arrayOfStrings[arrayOfStrings.Length - 1];
+        }
     }
 }
