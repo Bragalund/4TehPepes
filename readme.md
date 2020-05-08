@@ -1,12 +1,14 @@
 ﻿# Pepes Webcrawler
 
-Webcrawler for getting wallpapers/pictures from 4chan.  
+Simple webcrawler for getting wallpapers/pictures from 4chan.
+Single thread. Can be optimized to multithreaded for better performance.  
 
 ## Prerequisites  
 
-.net core 3.1 installed  
+.net core 3.1 installed  [https://dotnet.microsoft.com/download/dotnet-core](https://dotnet.microsoft.com/download/dotnet-core)
 
-Change this CONST VARIABLE(PathForSavingImages) into where you want to store your images in this file: [pepsCrawler/Helpers/StringConstants.cs](pepsCrawler/Helpers/StringConstants.cs)  
+Change this CONST VARIABLE "PathForSavingImages" into where you want to store your images.
+The variable is in this file: [pepsCrawler/Helpers/StringConstants.cs](pepsCrawler/Helpers/StringConstants.cs)  
 
 ## How to run  
 
