@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
@@ -37,13 +38,13 @@ namespace pepsCrawler.Crawlers
             using (var content = response.Content)
             {
                 var forumPage = await HtmlHelpers.ParseContentToHtmlDocument(content);
-                var chanThreads = forumPage.DocumentNode.SelectNodes(XPathConstants.AllThreadsOnMainPage);
+                var chanThreads = forumPage.DocumentNode.SelectNodes(StringConstants.AllThreadsOnMainPage);
                 if (chanThreads != null)
                     foreach (var thread in chanThreads)
                     {
                         var linksToThreads =
                             forumPage.DocumentNode.SelectNodes(
-                                XPathConstants.LinksToThreadsOnMainPage);
+                                StringConstants.LinksToThreadsOnMainPage);
                         var threadNumberStart = isFirstPage ? 1 : 0;
                         if (linksToThreads.Count > threadNumberStart)
                         {
@@ -84,7 +85,8 @@ namespace pepsCrawler.Crawlers
 
         private async Task<string> WriteImageToFile(ImageDto imageDto)
         {
-            var path = "D:\\Peps\\DownloadedWithScript";
+            var path = StringConstants.PathForSavingImages;
+            if (!Directory.Exists(path)) throw new DirectoryNotFoundException(path);
             var img = Image.FromStream(imageDto.ImageStream);
             var isHorizontal = IsHorizontalImage(img);
             if (isHorizontal)
@@ -94,6 +96,12 @@ namespace pepsCrawler.Crawlers
 
             var pathAndFilename = path + imageDto.ImageName;
 
+            if (!Directory.Exists(path))
+            {
+                Console.WriteLine("Creating directory: "+path);
+                Directory.CreateDirectory(path);
+            }
+                
             var shouldSaveImage = ShouldSaveImage(isHorizontal, img);
             if (shouldSaveImage)
             {
@@ -168,7 +176,7 @@ namespace pepsCrawler.Crawlers
         private async Task<List<ImageDto>> GetAllImagesAsStreams(HtmlNode thread, string threadLink)
         {
             var images = new List<ImageDto>();
-            var imageLinkNodes = thread.SelectNodes(XPathConstants.AllImageLinks);
+            var imageLinkNodes = thread.SelectNodes(StringConstants.AllImageLinks);
             var imageLinks = imageLinkNodes.Select(x => "https:" + x.Attributes[1].Value).ToList();
             foreach (var imageLink in imageLinks)
             {
