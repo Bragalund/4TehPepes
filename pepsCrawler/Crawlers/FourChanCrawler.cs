@@ -21,19 +21,31 @@ namespace pepsCrawler.Crawlers
 
         public async Task<List<ImageDto>> GetPepesFrom4Chan()
         {
+            var imageDtos = await CrawlWebsite(BaseUrl, true);
+            for (var i = 2; i < 100; i++)
+            {
+                Console.WriteLine("\nCrawling website: " + BaseUrl + i + "\n");
+                imageDtos.AddRange(await CrawlWebsite(BaseUrl + i, false));
+            }
+            return imageDtos;
+        }
+
+        private async Task<List<ImageDto>> CrawlWebsite(string url, bool isFirstPage)
+        {
             var images = new List<ImageDto>();
-            using var response = await _client.GetAsyncWithNewUserAgent(BaseUrl);
+            using var response = await _client.GetAsyncWithNewUserAgent(url);
             using (var content = response.Content)
             {
-                var firstMainPage = await HtmlHelpers.ParseContentToHtmlDocument(content);
-                var chanThreads = firstMainPage.DocumentNode.SelectNodes(XPathConstants.AllThreadsOnMainPage);
+                var forumPage = await HtmlHelpers.ParseContentToHtmlDocument(content);
+                var chanThreads = forumPage.DocumentNode.SelectNodes(XPathConstants.AllThreadsOnMainPage);
                 if (chanThreads != null)
                     foreach (var thread in chanThreads)
                     {
                         var linksToThreads =
-                            firstMainPage.DocumentNode.SelectNodes(
+                            forumPage.DocumentNode.SelectNodes(
                                 XPathConstants.LinksToThreadsOnMainPage);
-                        if (linksToThreads.Count > 1)
+                        var threadNumberStart = isFirstPage ? 1 : 0;
+                        if (linksToThreads.Count > threadNumberStart)
                         {
                             // gå inn i hver threadlink, men ikke den første på førstesiden, fordi den er guidelines for forumet.
                             for (var i = 1; i < linksToThreads.Count; i++)
