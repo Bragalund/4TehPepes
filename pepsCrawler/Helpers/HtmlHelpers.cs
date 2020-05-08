@@ -18,12 +18,13 @@ namespace pepsCrawler.Helpers
         
         public static ImageFormat GetImageFormatFromLink(string link)
         {
-            var linkEnding = link.Substring(link.IndexOf(".", StringComparison.Ordinal) + 1);
-            return linkEnding switch
+            var wordsSeperatedByPunctuation = link.Split(".");
+            var lastWord = wordsSeperatedByPunctuation[wordsSeperatedByPunctuation.Length - 1];
+            return lastWord switch
             {
                 "jpg" => ImageFormat.Jpeg,
                 "png" => ImageFormat.Png,
-                _ => ImageFormat.Jpeg
+                _ => ImageFormat.Wmf
             };
         }
 

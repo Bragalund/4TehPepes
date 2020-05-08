@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using pepsCrawler.Helpers;
@@ -28,6 +30,7 @@ namespace pepsCrawler.Crawlers
                 Console.WriteLine("\nCrawling website: " + BaseUrl + i + "\n");
                 imageDtos.AddRange(await CrawlWebsite(BaseUrl + i, false));
             }
+
             return imageDtos;
         }
 
@@ -67,11 +70,24 @@ namespace pepsCrawler.Crawlers
             return images;
         }
 
-        private async Task<bool> WriteImagesToFile(List<ImageDto> imageDtos)
+        private async Task<bool> WriteImagesToFile(ICollection<ImageDto> imageDtos)
         {
             try
             {
-                foreach (var imageDto in imageDtos) await WriteImageToFile(imageDto);
+                var threads = new List<Thread>();
+                foreach (var imageDto in imageDtos)
+                {
+                    var thread = new Thread(async () => { await WriteImageToFile(imageDto); });
+                    //imageDtos.Remove(imageDto);
+                    thread.Name = "SID" + imageDto.ImageName;
+                    thread.Start();
+                    threads.Add(thread);
+                }
+
+                foreach (var thread in threads)
+                {
+                    thread.Join();
+                }
 
                 return true;
             }
@@ -89,6 +105,7 @@ namespace pepsCrawler.Crawlers
             if (!Directory.Exists(path)) throw new DirectoryNotFoundException(path);
             var img = Image.FromStream(imageDto.ImageStream);
             var isHorizontal = IsHorizontalImage(img);
+
             if (isHorizontal)
                 path += "\\horizontal\\";
             else
@@ -98,15 +115,15 @@ namespace pepsCrawler.Crawlers
 
             if (!Directory.Exists(path))
             {
-                Console.WriteLine("Creating directory: "+path);
+                Console.WriteLine("Creating directory: " + path);
                 Directory.CreateDirectory(path);
             }
-                
-            var shouldSaveImage = ShouldSaveImage(isHorizontal, img);
+
+            var shouldSaveImage = ShouldSaveImage(isHorizontal, img, pathAndFilename);
             if (shouldSaveImage)
             {
                 Console.WriteLine("saving image to path: " + pathAndFilename);
-                img.Tag = new{imageDto.ThreadName}; // TODO Not working to add Tag to image. Needs to be fixed.
+                img.Tag = new {imageDto.ThreadName}; // TODO Not working to add Tag to image. Needs to be fixed.
                 img.Save(pathAndFilename, imageDto.ChosenImageFormat);
             }
             else
@@ -119,8 +136,14 @@ namespace pepsCrawler.Crawlers
             return pathAndFilename;
         }
 
-        private bool ShouldSaveImage(bool isHorizontal, Image image)
+        private bool ShouldSaveImage(bool isHorizontal, Image image, string pathAndFilename)
         {
+            if (File.Exists(pathAndFilename))
+            {
+                Console.WriteLine("Image already exists. " + pathAndFilename);
+                return false;
+            }
+
             if (isHorizontal)
             {
                 if (image.HorizontalResolution < 60 || image.VerticalResolution < 60)
@@ -180,10 +203,18 @@ namespace pepsCrawler.Crawlers
             var imageLinks = imageLinkNodes.Select(x => "https:" + x.Attributes[1].Value).ToList();
             foreach (var imageLink in imageLinks)
             {
-                var image = await _client.DownloadFile(imageLink);
-                if (image == null) continue;
-                var imageDto = new ImageDto(image, imageLink, threadLink);
-                images.Add(imageDto);
+                var imageIsSupportedFormat = HtmlHelpers.GetImageFormatFromLink(imageLink);
+                if (Equals(imageIsSupportedFormat, ImageFormat.Jpeg) || Equals(imageIsSupportedFormat, ImageFormat.Png))
+                {
+                    var image = await _client.DownloadFile(imageLink);
+                    if (image == null) continue;
+                    var imageDto = new ImageDto(image, imageLink, threadLink);
+                    images.Add(imageDto);
+                }
+                else
+                {
+                    Console.WriteLine("Not supported format. Cant download image: " + imageLink);
+                }
             }
 
             return images;
