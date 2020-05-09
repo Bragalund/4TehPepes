@@ -155,7 +155,7 @@ namespace pepsCrawler.Crawlers
 
                 if (image.Size.Width < 1900)
                 {
-                    Console.WriteLine($"image.Size.Width < 1900. {image.Size.Width}\nForkaster.");
+                    Console.WriteLine($"image.Size.Width < 1900. {image.Size.Width}\nNot saving.");
                     return false;
                 }
             }
@@ -170,7 +170,7 @@ namespace pepsCrawler.Crawlers
 
                 if (image.Size.Height < 1000)
                 {
-                    Console.WriteLine($"image.Size.Height < 1900. {image.Size.Height}\nForkaster.");
+                    Console.WriteLine($"image.Size.Height < 1000. {image.Size.Height}\nNot saving");
                     return false;
                 }
             }
@@ -185,7 +185,7 @@ namespace pepsCrawler.Crawlers
 
         private async Task<bool> CrawlAndSaveImagesForThread(HtmlNode chanThread)
         {
-            var threadUrl = GetThreadUrl(chanThread);
+            var threadUrl = HtmlHelpers.GetThreadUrl(chanThread, BaseUrl);
             var imagesFromThread = await GetImagesFromThread(threadUrl);
             var writeWentWell = await WriteImagesToFile(imagesFromThread);
             if (writeWentWell)
@@ -220,12 +220,7 @@ namespace pepsCrawler.Crawlers
             return images;
         }
 
-        private static string GetThreadUrl(HtmlNode chanThread)
-        {
-            var chanThreadId = chanThread.Attributes[1].Value;
-            var strippedChanThreadId = chanThreadId.Replace("t", "");
-            return BaseUrl + "thread/" + strippedChanThreadId;
-        }
+
 
         private async Task<List<ImageDto>> GetImagesFromThread(string threadUrl)
         {

@@ -28,3 +28,8 @@ Run in commandline:
 or  
 .\pepsCrawler\bin\Debug\netcoreapp3.1\pepsCrawler.exe
 ```
+
+## Possible extensions
+
+To remove nude images:  
+[https://github.com/yahoo/open_nsfw](https://github.com/yahoo/open_nsfw)

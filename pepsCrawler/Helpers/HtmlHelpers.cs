@@ -33,6 +33,13 @@ namespace pepsCrawler.Helpers
             var arrayOfStrings = link.Split("/");
             return arrayOfStrings[arrayOfStrings.Length - 1];
         }
+        
+        public static string GetThreadUrl(HtmlNode chanThread, string baseUrl)
+        {
+            var chanThreadId = chanThread.Attributes[1].Value;
+            var strippedChanThreadId = chanThreadId.Replace("t", "");
+            return baseUrl + "thread/" + strippedChanThreadId;
+        }
 
         public static string GetThreadNumberFromLink(string link)
         {
