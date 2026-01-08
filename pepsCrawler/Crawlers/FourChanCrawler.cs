@@ -4,7 +4,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using pepsCrawler.Helpers;
@@ -43,26 +42,27 @@ namespace pepsCrawler.Crawlers
                 var forumPage = await HtmlHelpers.ParseContentToHtmlDocument(content);
                 var chanThreads = forumPage.DocumentNode.SelectNodes(StringConstants.AllThreadsOnMainPage);
                 if (chanThreads != null)
-                    foreach (var thread in chanThreads)
+                {
+                    var threadNumberStart = isFirstPage ? 1 : 0;
+                    if (chanThreads.Count > threadNumberStart)
                     {
-                        var linksToThreads =
-                            forumPage.DocumentNode.SelectNodes(
-                                StringConstants.LinksToThreadsOnMainPage);
-                        var threadNumberStart = isFirstPage ? 1 : 0;
-                        if (linksToThreads.Count > threadNumberStart)
+                        // gå inn i hver threadlink, men ikke den første på førstesiden, fordi den er guidelines for forumet.
+                        for (var i = threadNumberStart; i < chanThreads.Count; i++)
                         {
-                            // gå inn i hver threadlink, men ikke den første på førstesiden, fordi den er guidelines for forumet.
-                            for (var i = 1; i < linksToThreads.Count; i++)
-                                await CrawlAndSaveImagesForThread(chanThreads[i]);
+                            await CrawlAndSaveImagesForThread(chanThreads[i]);
                         }
-                        else
+                    }
+                    else
+                    {
+                        // Too few images to be a thread
+                        // Get all images from main page
+                        foreach (var thread in chanThreads)
                         {
-                            // Too few images to be a thread
-                            // Get all images from main page
                             images = await GetAllImagesAsStreams(thread, "page");
                             await WriteImagesToFile(images);
                         }
                     }
+                }
                 else
                     Console.WriteLine("No chantreads!");
             }
@@ -74,20 +74,8 @@ namespace pepsCrawler.Crawlers
         {
             try
             {
-                var threads = new List<Thread>();
-                foreach (var imageDto in imageDtos)
-                {
-                    var thread = new Thread(async () => { await WriteImageToFile(imageDto); });
-                    //imageDtos.Remove(imageDto);
-                    thread.Name = "SID" + imageDto.ImageName;
-                    thread.Start();
-                    threads.Add(thread);
-                }
-
-                foreach (var thread in threads)
-                {
-                    thread.Join();
-                }
+                var writeTasks = imageDtos.Select(WriteImageToFile).ToList();
+                await Task.WhenAll(writeTasks);
 
                 return true;
             }
@@ -101,22 +89,23 @@ namespace pepsCrawler.Crawlers
 
         private async Task<string> WriteImageToFile(ImageDto imageDto)
         {
-            var path = StringConstants.PathForSavingImages;
-            if (!Directory.Exists(path)) throw new DirectoryNotFoundException(path);
+            var basePath = StringConstants.PathForSavingImages;
+            if (!Directory.Exists(basePath))
+            {
+                Console.WriteLine("Creating directory: " + basePath);
+                Directory.CreateDirectory(basePath);
+            }
             var img = Image.FromStream(imageDto.ImageStream);
             var isHorizontal = IsHorizontalImage(img);
 
-            if (isHorizontal)
-                path += "\\horizontal\\";
-            else
-                path += "\\portrait\\";
+            var orientationFolder = isHorizontal ? "horizontal" : "portrait";
+            var orientationPath = Path.Combine(basePath, orientationFolder);
+            var pathAndFilename = Path.Combine(orientationPath, imageDto.ImageName);
 
-            var pathAndFilename = path + imageDto.ImageName;
-
-            if (!Directory.Exists(path))
+            if (!Directory.Exists(orientationPath))
             {
-                Console.WriteLine("Creating directory: " + path);
-                Directory.CreateDirectory(path);
+                Console.WriteLine("Creating directory: " + orientationPath);
+                Directory.CreateDirectory(orientationPath);
             }
 
             var shouldSaveImage = ShouldSaveImage(isHorizontal, img, pathAndFilename);
